@@ -21,10 +21,16 @@ You need [Obsidian](https://obsidian.md) and
 Then, from a terminal inside the folder you want to use as your vault:
 
 ```bash
-bash setup.sh           # just the vault structure (all most people need)
-bash setup.sh --full    # also install the CLIs, MCP server, and Claude Code plugins
-bash setup.sh --help    # see every option
+bash setup.sh             # build the vault structure (asks which folders, in a terminal)
+bash setup.sh --defaults  # take the standard folders, no questions
+bash setup.sh --full      # also install the CLIs, MCP server, and Claude Code plugins
+bash setup.sh --help      # see every option
 ```
+
+In a terminal the script asks which folders to create -- keep, rename, or skip
+each default, then add your own. Run it piped, or with `--defaults`/`--full`, to
+take the standard set silently. `CLAUDE.md` is generated to match whatever
+folders you choose.
 
 It's safe to re-run. It never overwrites a file you already have, and it skips
 anything already installed.
