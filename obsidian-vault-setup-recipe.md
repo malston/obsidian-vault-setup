@@ -429,7 +429,10 @@ $DO_CLIS    && install_clis     || true
 $DO_PLUGINS && install_plugins  || true
 
 c_info "Done."
-echo "Next: open Claude Code in your vault and say \"catch me up\"."
+echo "Next:"
+echo "  1. In Obsidian, choose \"Open folder as vault\" and pick: $VAULT"
+echo "     (Use \"Open folder as vault,\" not \"Create new vault\" -- the folder already exists.)"
+echo "  2. Open Claude Code in your vault and say \"catch me up\"."
 
 if $DO_PLUGINS || $DO_MCP; then
   obsidian_checklist
@@ -599,7 +602,9 @@ structure matches this recipe. Then point them at the first-run step below.
 
 ## First run
 
-Open Claude Code in your vault and say:
+First, open the vault in Obsidian. The script created the folder on disk, but Obsidian won't find it on its own: open Obsidian, choose **"Open folder as vault"** (not "Create new vault"), and pick the folder you just set up. It'll appear in your vault list from then on.
+
+Then open Claude Code in your vault and say:
 
 > "catch me up"
 

@@ -33,6 +33,14 @@ Prefer not to run a script? Open Claude Code in your vault and say:
 
 > "Read obsidian-vault-setup-recipe.md and set up my vault as described."
 
+## Open it in Obsidian
+
+The script creates the folder on disk, but Obsidian doesn't find it on its own.
+Open Obsidian, choose **"Open folder as vault"**, and pick the folder you just
+set up. It'll show up in your vault list from then on.
+
+(Use "Open folder as vault," not "Create new vault" -- the folder already exists.)
+
 ## Then what
 
 Open Claude Code in your vault and say **"catch me up."** The first time there's
