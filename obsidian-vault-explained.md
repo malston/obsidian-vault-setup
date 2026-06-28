@@ -80,7 +80,7 @@ Obsidian community plugins install from **Settings → Community plugins → Bro
 
 The one that brings Claude into the app:
 
-- **Claudian** (by Yishen Tu, [github.com/YishenTu](https://github.com/YishenTu)) -- a Claude chat panel inside Obsidian, so I can work the vault without leaving the app. Installed via BRAT.
+- **Claudian** (by Yishen Tu, [github.com/YishenTu/claudian](https://github.com/YishenTu/claudian)) -- a Claude chat panel inside Obsidian, so I can work the vault without leaving the app. It's not in the community store, so install BRAT first, then give BRAT that repo address.
 
 Connecting Claude Code in the terminal to the vault is a separate step, covered in [Connecting Claude Code to your vault](#connecting-claude-code-to-your-vault) below.
 

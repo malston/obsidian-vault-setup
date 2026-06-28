@@ -398,25 +398,34 @@ obsidian_checklist() {
   cat <<'EOF'
 
 ------------------------------------------------------------------------
-Obsidian community plugins (install these yourself)
+Obsidian plugins (install these yourself, inside Obsidian)
 ------------------------------------------------------------------------
-Obsidian has no install CLI, so add these from inside the app:
-Settings -> Community plugins -> Browse.
+Obsidian has no command-line installer, so these are added in the app.
+Open Settings -> Community plugins. On a brand-new vault, click
+"Turn on community plugins" first, then use "Browse" to search and install.
+None of these are required; add the ones that sound useful.
 
-The Claude bridge:
-  - Claudian        (chat with Claude inside Obsidian; install via the BRAT plugin)
-  - Local REST API  (by Adam Coddington)
-  - MCP Tools       (by Jack Steam) -- optional alternative to the mcpvault MCP server
+To chat with Claude inside Obsidian (optional):
+  - Claudian -- not in the community store, so it installs through BRAT:
+      1. In Browse, search for "BRAT", install it, and enable it.
+         (BRAT = Beta Reviewers Auto-update Tool. It installs plugins
+          straight from GitHub, which is how Claudian is distributed.)
+      2. Open the command palette (Cmd/Ctrl + P), run the BRAT command
+         "Add a beta plugin", and paste this address:
+             https://github.com/YishenTu/claudian
+  - MCP Tools (+ Local REST API) -- only if you'd rather run the MCP
+      server inside Obsidian instead of the mcpvault one this script
+      sets up with --mcp. Both are in Browse.
 
-Daily drivers:
-  - Dataview
-  - Tasks
-  - Calendar
-  - Natural Language Dates
-  - Frontmatter Modified Date
-  - Custom Sort
-  - Auto Card Link
-  - Importer
+Handy extras (each is a separate, optional install from Browse):
+  - Dataview                  -- build live lists and tables from your notes
+  - Tasks                     -- track to-dos with due dates across notes
+  - Calendar                  -- a calendar in the sidebar for daily notes
+  - Natural Language Dates    -- type dates like "tomorrow" or "next friday"
+  - Frontmatter Modified Date -- auto-update a note's last-edited date
+  - Custom Sort               -- control the order files show in the sidebar
+  - Auto Card Link            -- turn pasted web links into preview cards
+  - Importer                  -- bring in notes from Notion, Evernote, etc.
 ------------------------------------------------------------------------
 EOF
 }
