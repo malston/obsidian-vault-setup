@@ -351,8 +351,12 @@ First open this folder in Obsidian: choose "Open folder as vault" and pick
   $VAULT
 Obsidian must be running with the vault open for the commands below to work.
 
-Fast path -- Obsidian's CLI installs community plugins by id. With the vault
-open, run these in a terminal:
+Fast path -- Obsidian ships a command-line tool that installs community
+plugins by id. Enable it once: Settings -> General -> turn on "Command line
+interface", then follow the prompt to register it (adds 'obsidian' to your
+PATH; on macOS you approve a system dialog). Full steps: https://obsidian.md/cli
+
+Then, with the vault open, run these in a terminal:
 
   obsidian plugin:install id=dataview enable vault="$vname"
   obsidian plugin:install id=obsidian-tasks-plugin enable vault="$vname"
