@@ -76,11 +76,11 @@ Everything above runs on vanilla Claude Code and plain files. You need nothing e
 
 ### Inside Obsidian
 
-Obsidian community plugins install from **Settings → Community plugins → Browse**. A couple of mine are beta builds installed through **BRAT** (the Beta Reviewers Auto-update Tool, itself a community plugin), which pulls a plugin straight from a GitHub repo.
+Obsidian community plugins install from **Settings → Community plugins → Browse**. Every plugin below is in that store.
 
 The one that brings Claude into the app:
 
-- **Claudian** (by Yishen Tu, [github.com/YishenTu/claudian](https://github.com/YishenTu/claudian)) -- a Claude chat panel inside Obsidian, so I can work the vault without leaving the app. It's not in the community store, so install BRAT first, then give BRAT that repo address.
+- **Claudian** (by Yishen Tu, [github.com/YishenTu/claudian](https://github.com/YishenTu/claudian)) -- a Claude chat panel inside Obsidian, so I can work the vault without leaving the app. Install it from the community store (search "Claudian," or `obsidian plugin:install id=realclaudian`).
 
 Connecting Claude Code in the terminal to the vault is a separate step, covered in [Connecting Claude Code to your vault](#connecting-claude-code-to-your-vault) below.
 

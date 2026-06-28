@@ -434,13 +434,12 @@ What each one does:
 No CLI handy? Install the same ones from inside the app:
 Settings -> Community plugins -> turn them on -> Browse -> search by name.
 
-To chat with Claude inside Obsidian (Claudian): it's not in the community
-store, so it goes through BRAT. Install BRAT, then add Claudian to it:
+To chat with Claude inside Obsidian, install Claudian. It's in the community
+store (and needs the Claude Code CLI, which you already have):
 
-  obsidian plugin:install id=obsidian42-brat enable vault="$vname"
+  obsidian plugin:install id=realclaudian enable vault="$vname"
 
-then in Obsidian open the command palette (Cmd/Ctrl + P), run BRAT's
-"Add a beta plugin", and paste: https://github.com/YishenTu/claudian
+(or search "Claudian" in Browse.)
 
 Prefer the in-Obsidian MCP server over the mcpvault one (--mcp sets up)?
   obsidian plugin:install id=obsidian-local-rest-api enable vault="$vname"
