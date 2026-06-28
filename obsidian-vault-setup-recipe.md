@@ -1,0 +1,608 @@
+---
+title: "Set up an AI-native Obsidian vault (point your Claude here)"
+author: Mark Alston
+status: draft
+modified: 2026-06-28
+---
+
+# Set up an AI-native Obsidian vault
+
+This is a setup recipe. If you already have Obsidian and Claude Code installed, you can hand this whole page to Claude and let it build the scaffold for you. Open Claude Code inside the folder you want to use as your vault and say:
+
+> "Read this page and set up my vault exactly as described."
+
+That's the short version. The rest of this page is written so Claude can follow it without any other context. If you want to understand _why_ it's built this way, or change it to fit how you work, read the companion post: [How my AI chief-of-staff vault works](obsidian-vault-explained.md).
+
+## What you need first
+
+- **Obsidian**, with a vault folder created. (See [obsidian.md](https://obsidian.md).)
+- **Claude Code**, installed and signed in. (See [the Claude Code docs](https://docs.claude.com/en/docs/claude-code/overview).)
+
+I'm assuming both are already working. This recipe doesn't cover installing them, because those steps change often enough that any version I wrote here would be wrong within a month.
+
+## What you'll end up with
+
+Six folders, three files, and a working "catch me up" command. The whole thing is plain Markdown, so nothing here locks you into Obsidian or Claude. If you walk away from either tool, you still have a folder of notes.
+
+---
+
+## Two ways to do this
+
+**The fast path:** run a script. Save the [setup script](#the-setup-script) below as `setup.sh` in your vault folder and run it -- or just tell Claude Code "run setup.sh for me." With no flags it only creates the folders and files, which is all most people need. Flags add the optional tooling.
+
+**The manual path:** hand this page to Claude and let it build the scaffold step by step, no script. That's the [Instructions for Claude](#instructions-for-claude) section. Use this if you'd rather not run a script you didn't read, or you don't have a terminal handy.
+
+Both produce the same vault. Pick one.
+
+## The setup script
+
+Save this as `setup.sh`, then run it from a terminal (or ask Claude Code to run it):
+
+```bash
+bash setup.sh                 # just the vault structure (safe default)
+bash setup.sh --full          # also install CLIs, the MCP server, and Claude Code plugins
+bash setup.sh --mcp --clis    # pick only the pieces you want
+bash setup.sh --full --dry-run  # preview every command without running it
+bash setup.sh --help          # see all options
+```
+
+It's safe to re-run: it never overwrites a file you already have, and it skips anything already installed. Missing prerequisites (Homebrew, Go, Claude Code) are reported, not silently installed. Obsidian's own plugins have no install CLI, so the script prints a checklist for those instead of trying to install them.
+
+<details>
+<summary>Show the full <code>setup.sh</code></summary>
+
+```bash
+#!/usr/bin/env bash
+#
+# setup.sh -- scaffold an AI-native Obsidian vault and, optionally, install the
+# tooling that makes it sharper. Safe to re-run: it never overwrites a file that
+# already exists, and it skips anything already installed or registered.
+#
+# Usage:
+#   ./setup.sh [options]
+#
+# With no options it only creates the vault structure (folders + seed files) in
+# the current directory. Nothing is installed. That is all most people need.
+#
+# Options:
+#   --vault <path>   Target vault directory (default: current directory).
+#   --mcp            Register the Obsidian MCP server with Claude Code.
+#   --clis           Install the command-line tools (vlt, rtk, beads, gemini, claudeup).
+#   --plugins        Add marketplaces and install the curated Claude Code plugins.
+#   --full           Do everything: --mcp --clis --plugins.
+#   --dry-run        Print the commands that would run, without running them.
+#   -h, --help       Show this help.
+#
+# Prerequisites are detected, never silently installed. If something needed is
+# missing (Homebrew, Go, npx, Claude Code), the script tells you and skips that
+# step instead of changing your system behind your back.
+
+set -euo pipefail
+
+# ---- defaults -------------------------------------------------------------
+
+VAULT="."
+DO_MCP=false
+DO_CLIS=false
+DO_PLUGINS=false
+DRY_RUN=false
+
+# ---- helpers --------------------------------------------------------------
+
+c_info()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
+c_ok()    { printf '\033[1;32m  ok\033[0m %s\n' "$*"; }
+c_skip()  { printf '\033[1;33m skip\033[0m %s\n' "$*"; }
+c_warn()  { printf '\033[1;31m warn\033[0m %s\n' "$*" >&2; }
+
+have() { command -v "$1" >/dev/null 2>&1; }
+
+# run CMD...  -- echo and execute, or just echo under --dry-run
+run() {
+  if $DRY_RUN; then
+    printf '       [dry-run] %s\n' "$*"
+  else
+    "$@"
+  fi
+}
+
+usage() { sed -n '2,40p' "$0" | sed 's/^# \{0,1\}//'; exit 0; }
+
+# ---- argument parsing -----------------------------------------------------
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --vault)   VAULT="${2:?--vault needs a path}"; shift 2 ;;
+    --mcp)     DO_MCP=true; shift ;;
+    --clis)    DO_CLIS=true; shift ;;
+    --plugins) DO_PLUGINS=true; shift ;;
+    --full)    DO_MCP=true; DO_CLIS=true; DO_PLUGINS=true; shift ;;
+    --dry-run) DRY_RUN=true; shift ;;
+    -h|--help) usage ;;
+    *) c_warn "unknown option: $1"; echo "Try --help."; exit 2 ;;
+  esac
+done
+
+# ---- scaffold the vault ---------------------------------------------------
+
+scaffold() {
+  c_info "Scaffolding vault at: $VAULT"
+  run mkdir -p "$VAULT"
+  # Resolve to an absolute path for the MCP registration step.
+  if ! $DRY_RUN; then VAULT="$(cd "$VAULT" && pwd)"; fi
+
+  for d in active positions sources vault logs _inbox; do
+    if [ -d "$VAULT/$d" ]; then
+      c_skip "$d/ exists"
+    else
+      run mkdir -p "$VAULT/$d"
+      c_ok "$d/"
+    fi
+  done
+
+  write_file "$VAULT/CLAUDE.md"               claude_md
+  write_file "$VAULT/README.md"               readme_md
+  write_file "$VAULT/index.md"                index_md
+  write_file "$VAULT/active/ref-trajectory.md" trajectory_md
+}
+
+# write_file PATH FUNC -- write FUNC's output to PATH only if PATH is absent
+write_file() {
+  local path="$1" producer="$2"
+  if [ -f "$path" ]; then
+    c_skip "${path#"$VAULT"/} exists (left untouched)"
+    return
+  fi
+  if $DRY_RUN; then
+    printf '       [dry-run] write %s\n' "${path#"$VAULT"/}"
+    return
+  fi
+  "$producer" > "$path"
+  c_ok "${path#"$VAULT"/}"
+}
+
+claude_md() {
+cat <<'EOF'
+# CLAUDE.md -- Vault Operating Manual
+
+## Who you are
+
+You are my AI chief of staff. Your job is to ground every session in current
+context, surface relevant prior thinking, and help me synthesize knowledge --
+not just retrieve it.
+
+## Vault structure
+
+- `active/`     -- current work in progress (keep this small, ~15 files max)
+- `positions/`  -- durable opinion docs: what I currently think about a topic
+- `sources/`    -- immutable raw inputs: articles, transcripts, PDFs. Read, never modify.
+- `vault/`      -- completed and archived work, dated YYYY-MM-DD-slug.md
+- `logs/`       -- session logs and decision records
+- `_inbox/`     -- landing zone for captures, triaged into the folders above
+
+## Cold start
+
+When I start a session or say "catch me up" or "orient me":
+
+1. Read `active/ref-trajectory.md` -- my current focus and open questions.
+2. Scan `active/` for anything modified recently.
+3. Check `logs/` for the most recent session log.
+4. Tell me what's active, what's open, and what I last worked on.
+
+Don't load everything at once. Load on demand based on where the conversation goes.
+
+## Position docs
+
+Files in `positions/` are my current thinking on a topic. Each one states:
+
+- The position, directly.
+- Decisions already settled (don't relitigate these).
+- Open questions, where pushback is welcome.
+- A `lifecycle:` field in frontmatter: draft | reviewed | verified | disputed.
+  I'm the only one who promotes a doc past `draft`. Age alone never demotes it.
+
+When a topic comes up, check `positions/` before reasoning from scratch.
+
+## Sources
+
+When I bring in outside material (an article, transcript, PDF):
+
+1. Save the raw text to `sources/` with a descriptive, dated filename.
+2. Treat it as read-only. Synthesize from it; never edit it.
+3. Link back to it from any note that draws on it, so the original is one click away.
+
+## Writing back
+
+After a substantive session, append a short entry to `logs/YYYY-MM-DD.md`:
+decisions made, ideas worth keeping, any position docs that should change.
+Good thinking shouldn't disappear into chat history.
+
+## Index
+
+`index.md` at the vault root lists every page with a one-line summary. Read it
+first to find relevant pages instead of scanning folders. Update it whenever you
+create, rename, or delete a page.
+
+## Tone
+
+Direct. Opinionated. Push back when something conflicts with a position I've
+already written down. Don't just agree -- synthesize.
+EOF
+}
+
+readme_md() {
+cat <<'EOF'
+# Knowledge Vault
+
+A personal knowledge system optimized for AI-assisted synthesis, not human browsing.
+
+- `CLAUDE.md` -- operating manual for Claude Code sessions
+- `index.md`  -- catalog of every page, for navigation
+- `active/`   -- current work (ref-trajectory.md is read first each session)
+- `positions/`-- durable opinion docs
+- `sources/`  -- raw inputs, read-only
+- `vault/`    -- archived work, dated
+- `logs/`     -- session logs
+- `_inbox/`   -- capture zone, triaged later
+
+To start a session: open Claude Code here and say "catch me up".
+EOF
+}
+
+index_md() {
+cat <<'EOF'
+# Index
+
+The catalog of this vault. Every page gets one line: a link and a one-sentence
+summary. Keep it current.
+
+## Active
+
+- [[active/ref-trajectory]] -- current focus, projects, and open questions.
+EOF
+}
+
+trajectory_md() {
+  local today
+  today="$( $DRY_RUN && echo 'YYYY-MM-DD' || date +%F )"
+cat <<EOF
+# Trajectory
+
+The first file read each session. Keep it short and current.
+
+## Current focus
+
+_What I'm spending attention on right now. Replace this line._
+
+## Active projects
+
+- _Project -- one line on status._
+
+## Open questions
+
+- _A question I'm still chewing on._
+
+## Last updated
+
+$today
+EOF
+}
+
+# ---- MCP server -----------------------------------------------------------
+
+register_mcp() {
+  c_info "Registering the Obsidian MCP server"
+  if ! have claude; then
+    c_warn "Claude Code ('claude') not found. Install it, then re-run with --mcp."
+    return
+  fi
+  if ! have npx; then
+    c_warn "'npx' (Node.js) not found. Install Node, then re-run with --mcp."
+    return
+  fi
+  if claude mcp get obsidian >/dev/null 2>&1; then
+    c_skip "MCP server 'obsidian' already registered"
+  elif run claude mcp add obsidian -- npx @bitbonsai/mcpvault@latest "$VAULT"; then
+    c_ok "MCP server 'obsidian' -> $VAULT"
+  else
+    c_warn "could not register MCP server 'obsidian'"
+  fi
+}
+
+# ---- command-line tools ---------------------------------------------------
+
+install_clis() {
+  c_info "Installing command-line tools"
+
+  if have brew; then
+    for f in rtk beads gemini-cli; do
+      if brew list "$f" >/dev/null 2>&1; then
+        c_skip "$f (brew, already installed)"
+      elif run brew install "$f"; then
+        c_ok "$f"
+      else
+        c_warn "$f install failed"
+      fi
+    done
+  else
+    c_warn "Homebrew not found -- skipping rtk, beads, gemini-cli. See https://brew.sh"
+  fi
+
+  if have vlt; then
+    c_skip "vlt (already installed)"
+  elif have go; then
+    if run go install github.com/paivot-ai/vlt/cmd/vlt@latest; then c_ok "vlt"; else c_warn "vlt install failed"; fi
+  else
+    c_warn "Go not found -- skipping vlt. See https://go.dev/dl (needs Go 1.26+)."
+  fi
+
+  if have claudeup; then
+    c_skip "claudeup (already installed)"
+  elif have curl; then
+    if run bash -c 'curl -fsSL https://claudeup.github.io/install.sh | bash'; then c_ok "claudeup"; else c_warn "claudeup install failed"; fi
+  else
+    c_warn "curl not found -- skipping claudeup."
+  fi
+}
+
+# ---- Claude Code plugins --------------------------------------------------
+
+# marketplace repo -> name pairs, then plugin@marketplace identifiers
+install_plugins() {
+  c_info "Installing Claude Code plugins"
+  if ! have claude; then
+    c_warn "Claude Code ('claude') not found. Install it, then re-run with --plugins."
+    return
+  fi
+
+  local marketplaces=(
+    "kepano/obsidian-skills"
+    "malston/marks-marketplace"
+    "thedotmack/claude-mem"
+    "obra/superpowers-marketplace"
+    "anthropics/claude-plugins-official"
+    "upstash/context7"
+  )
+  for m in "${marketplaces[@]}"; do
+    run claude plugin marketplace add "$m" 2>/dev/null \
+      && c_ok "marketplace $m" \
+      || c_skip "marketplace $m (already added or unavailable)"
+  done
+
+  local installed
+  installed="$(claude plugin list 2>/dev/null || true)"
+
+  local plugins=(
+    "obsidian@obsidian-skills"
+    "marks-vault@marks-marketplace"
+    "marks-writing@marks-marketplace"
+    "claude-mem@thedotmack"
+    "superpowers@superpowers-marketplace"
+    "episodic-memory@superpowers-marketplace"
+    "remember@claude-plugins-official"
+    "context7@context7-marketplace"
+  )
+  for p in "${plugins[@]}"; do
+    if printf '%s' "$installed" | grep -qF "$p"; then
+      c_skip "plugin $p (already installed)"
+    elif run claude plugin install "$p" 2>/dev/null; then
+      c_ok "plugin $p"
+    else
+      c_warn "could not install $p (check the marketplace name)"
+    fi
+  done
+}
+
+# ---- Obsidian community plugins (manual) ----------------------------------
+
+obsidian_checklist() {
+  cat <<'EOF'
+
+------------------------------------------------------------------------
+Obsidian community plugins (install these yourself)
+------------------------------------------------------------------------
+Obsidian has no install CLI, so add these from inside the app:
+Settings -> Community plugins -> Browse.
+
+The Claude bridge:
+  - Claudian        (chat with Claude inside Obsidian; install via the BRAT plugin)
+  - Local REST API  (by Adam Coddington)
+  - MCP Tools       (by Jack Steam) -- optional alternative to the mcpvault MCP server
+
+Daily drivers:
+  - Dataview
+  - Tasks
+  - Calendar
+  - Natural Language Dates
+  - Frontmatter Modified Date
+  - Custom Sort
+  - Auto Card Link
+  - Importer
+------------------------------------------------------------------------
+EOF
+}
+
+# ---- main -----------------------------------------------------------------
+
+scaffold
+$DO_MCP     && register_mcp     || true
+$DO_CLIS    && install_clis     || true
+$DO_PLUGINS && install_plugins  || true
+
+c_info "Done."
+echo "Next: open Claude Code in your vault and say \"catch me up\"."
+
+if $DO_PLUGINS || $DO_MCP; then
+  obsidian_checklist
+else
+  echo "Tip: run with --full to also install the CLIs, MCP server, and Claude Code plugins."
+fi
+```
+
+</details>
+
+---
+
+## Instructions for Claude
+
+This is the manual path. Everything below is addressed to Claude. If you're a person reading this, you can skip to [First run](#first-run).
+
+You are setting up a knowledge vault in the current working directory. Do each step in order. Use relative paths. Don't overwrite a file that already exists without telling the user first and asking.
+
+### Step 1: Create the folder structure
+
+Create these six folders at the vault root:
+
+```bash
+active/       # current work in progress, things being thought about right now
+positions/    # durable opinion docs: what the user currently thinks about a topic
+sources/      # raw inputs: articles, transcripts, PDFs. Read these, never edit them.
+vault/        # finished and archived work, dated YYYY-MM-DD-slug.md
+logs/         # session logs and decision records, one file per day
+_inbox/       # landing zone for quick captures, triaged later into the folders above
+```
+
+### Step 2: Write `CLAUDE.md` at the vault root
+
+This is the operating manual every future session reads first. Write it verbatim:
+
+```markdown
+# CLAUDE.md -- Vault Operating Manual
+
+## Who you are
+
+You are my AI chief of staff. Your job is to ground every session in current
+context, surface relevant prior thinking, and help me synthesize knowledge --
+not just retrieve it.
+
+## Vault structure
+
+- `active/` -- current work in progress (keep this small, ~15 files max)
+- `positions/` -- durable opinion docs: what I currently think about a topic
+- `sources/` -- immutable raw inputs: articles, transcripts, PDFs. Read, never modify.
+- `vault/` -- completed and archived work, dated YYYY-MM-DD-slug.md
+- `logs/` -- session logs and decision records
+- `_inbox/` -- landing zone for captures, triaged into the folders above
+
+## Cold start
+
+When I start a session or say "catch me up" or "orient me":
+
+1. Read `active/ref-trajectory.md` -- my current focus and open questions.
+2. Scan `active/` for anything modified recently.
+3. Check `logs/` for the most recent session log.
+4. Tell me what's active, what's open, and what I last worked on.
+
+Don't load everything at once. Load on demand based on where the conversation goes.
+
+## Position docs
+
+Files in `positions/` are my current thinking on a topic. Each one states:
+
+- The position, directly.
+- Decisions already settled (don't relitigate these).
+- Open questions, where pushback is welcome.
+- A `lifecycle:` field in frontmatter: draft | reviewed | verified | disputed.
+  I'm the only one who promotes a doc past `draft`. Age alone never demotes it.
+
+When a topic comes up, check `positions/` before reasoning from scratch.
+
+## Sources
+
+When I bring in outside material (an article, transcript, PDF):
+
+1. Save the raw text to `sources/` with a descriptive, dated filename.
+2. Treat it as read-only. Synthesize from it; never edit it.
+3. Link back to it from any note that draws on it, so the original is one click away.
+
+## Writing back
+
+After a substantive session, append a short entry to `logs/YYYY-MM-DD.md`:
+decisions made, ideas worth keeping, any position docs that should change.
+Good thinking shouldn't disappear into chat history.
+
+## Index
+
+`index.md` at the vault root lists every page with a one-line summary. Read it
+first to find relevant pages instead of scanning folders. Update it whenever you
+create, rename, or delete a page.
+
+## Tone
+
+Direct. Opinionated. Push back when something conflicts with a position I've
+already written down. Don't just agree -- synthesize.
+```
+
+### Step 3: Write `README.md` at the vault root
+
+```markdown
+# Knowledge Vault
+
+A personal knowledge system optimized for AI-assisted synthesis, not human browsing.
+
+- `CLAUDE.md` -- operating manual for Claude Code sessions
+- `index.md` -- catalog of every page, for navigation
+- `active/` -- current work (ref-trajectory.md is read first each session)
+- `positions/`-- durable opinion docs
+- `sources/` -- raw inputs, read-only
+- `vault/` -- archived work, dated
+- `logs/` -- session logs
+- `_inbox/` -- capture zone, triaged later
+
+To start a session: open Claude Code here and say "catch me up".
+```
+
+### Step 4: Seed `index.md` at the vault root
+
+```markdown
+# Index
+
+The catalog of this vault. Every page gets one line: a link and a one-sentence
+summary. Keep it current.
+
+## Active
+
+- [[active/ref-trajectory]] -- current focus, projects, and open questions.
+```
+
+### Step 5: Seed `active/ref-trajectory.md`
+
+This is the file Claude reads first every session, so give it a real starting shape:
+
+```markdown
+# Trajectory
+
+The first file read each session. Keep it short and current.
+
+## Current focus
+
+_What I'm spending attention on right now. Replace this line._
+
+## Active projects
+
+- _Project -- one line on status._
+
+## Open questions
+
+- _A question I'm still chewing on._
+
+## Last updated
+
+2026-06-28
+```
+
+### Step 6: Confirm
+
+List the files and folders you created, show the user the tree, and confirm the
+structure matches this recipe. Then point them at the first-run step below.
+
+---
+
+## First run
+
+Open Claude Code in your vault and say:
+
+> "catch me up"
+
+The first time, there's almost nothing to catch up on -- that's expected. Open `active/ref-trajectory.md`, replace the placeholder lines with what you're actually working on, and you're running. From here, the vault fills itself in as you use it: drop articles into `sources/`, write opinions into `positions/`, let Claude log sessions into `logs/`.
+
+If you want to know how the pieces fit together, or you want to bend the structure to your own habits, read [How my AI chief-of-staff vault works](obsidian-vault-explained.md).
