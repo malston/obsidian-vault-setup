@@ -48,3 +48,27 @@ nothing to catch up on, which is expected. Open `active/ref-trajectory.md`,
 write down what you're working on, and you're running.
 
 For the why behind all of it, read `obsidian-vault-explained.md`.
+
+## Claudian and your `.claude` settings
+
+If you use the **Claudian** plugin (chat with Claude inside Obsidian), it reads
+your Claude settings with the same precedence as the Claude Code CLI, as long as
+its **"Load user settings"** toggle is on (Settings -> Claude). That toggle is on
+by default.
+
+With it on, settings load in this order, where each level overrides the one
+before it:
+
+1. `~/.claude` -- user scope (your machine-wide defaults)
+2. `<vault>/.claude` -- project scope (overrides user)
+3. `<vault>/.claude/settings.local.json` -- local scope (overrides project)
+
+This covers both `settings.json` and `CLAUDE.md` at each level: your vault's
+`CLAUDE.md` loads as project memory, and `~/.claude/CLAUDE.md` as user memory.
+
+Under the hood, Claudian runs the Claude Agent SDK with your vault as the working
+directory and tells it to load all three sources (`user`, `project`, `local`).
+Worth knowing: the Agent SDK loads no filesystem settings on its own, so this is
+a deliberate choice Claudian makes to match Claude Code. If you turn
+"Load user settings" off, Claudian drops to `project` + `local` only and ignores
+`~/.claude` entirely -- that one switch is what breaks parity with Claude Code.
