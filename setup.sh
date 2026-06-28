@@ -341,37 +341,52 @@ install_plugins() {
 # ---- Obsidian community plugins (manual) ----------------------------------
 
 obsidian_checklist() {
-  cat <<'EOF'
+  local vname; vname="$(basename "$VAULT")"
+cat <<EOF
 
 ------------------------------------------------------------------------
-Obsidian plugins (install these yourself, inside Obsidian)
+Obsidian plugins (optional, but nice to have)
 ------------------------------------------------------------------------
-Obsidian has no command-line installer, so these are added in the app.
-Open Settings -> Community plugins. On a brand-new vault, click
-"Turn on community plugins" first, then use "Browse" to search and install.
-None of these are required; add the ones that sound useful.
+First open this folder in Obsidian: choose "Open folder as vault" and pick
+  $VAULT
+Obsidian must be running with the vault open for the commands below to work.
 
-To chat with Claude inside Obsidian (optional):
-  - Claudian -- not in the community store, so it installs through BRAT:
-      1. In Browse, search for "BRAT", install it, and enable it.
-         (BRAT = Beta Reviewers Auto-update Tool. It installs plugins
-          straight from GitHub, which is how Claudian is distributed.)
-      2. Open the command palette (Cmd/Ctrl + P), run the BRAT command
-         "Add a beta plugin", and paste this address:
-             https://github.com/YishenTu/claudian
-  - MCP Tools (+ Local REST API) -- only if you'd rather run the MCP
-      server inside Obsidian instead of the mcpvault one this script
-      sets up with --mcp. Both are in Browse.
+Fast path -- Obsidian's CLI installs community plugins by id. With the vault
+open, run these in a terminal:
 
-Handy extras (each is a separate, optional install from Browse):
-  - Dataview                  -- build live lists and tables from your notes
-  - Tasks                     -- track to-dos with due dates across notes
-  - Calendar                  -- a calendar in the sidebar for daily notes
-  - Natural Language Dates    -- type dates like "tomorrow" or "next friday"
-  - Frontmatter Modified Date -- auto-update a note's last-edited date
-  - Custom Sort               -- control the order files show in the sidebar
-  - Auto Card Link            -- turn pasted web links into preview cards
-  - Importer                  -- bring in notes from Notion, Evernote, etc.
+  obsidian plugin:install id=dataview enable vault="$vname"
+  obsidian plugin:install id=obsidian-tasks-plugin enable vault="$vname"
+  obsidian plugin:install id=calendar enable vault="$vname"
+  obsidian plugin:install id=nldates-obsidian enable vault="$vname"
+  obsidian plugin:install id=frontmatter-modified-date enable vault="$vname"
+  obsidian plugin:install id=custom-sort enable vault="$vname"
+  obsidian plugin:install id=auto-card-link enable vault="$vname"
+  obsidian plugin:install id=obsidian-importer enable vault="$vname"
+
+What each one does:
+  dataview                   -- live lists and tables built from your notes
+  obsidian-tasks-plugin      -- to-dos with due dates across notes
+  calendar                   -- a calendar in the sidebar for daily notes
+  nldates-obsidian           -- type dates like "tomorrow" or "next friday"
+  frontmatter-modified-date  -- auto-update a note's last-edited date
+  custom-sort                -- control the order files show in the sidebar
+  auto-card-link             -- turn pasted web links into preview cards
+  obsidian-importer          -- import notes from Notion, Evernote, etc.
+
+No CLI handy? Install the same ones from inside the app:
+Settings -> Community plugins -> turn them on -> Browse -> search by name.
+
+To chat with Claude inside Obsidian (Claudian): it's not in the community
+store, so it goes through BRAT. Install BRAT, then add Claudian to it:
+
+  obsidian plugin:install id=obsidian42-brat enable vault="$vname"
+
+then in Obsidian open the command palette (Cmd/Ctrl + P), run BRAT's
+"Add a beta plugin", and paste: https://github.com/YishenTu/claudian
+
+Prefer the in-Obsidian MCP server over the mcpvault one (--mcp sets up)?
+  obsidian plugin:install id=obsidian-local-rest-api enable vault="$vname"
+  obsidian plugin:install id=mcp-tools enable vault="$vname"
 ------------------------------------------------------------------------
 EOF
 }
